@@ -15,23 +15,12 @@ MapWidget::MapWidget(QWidget *parent) : QWidget(parent){
 }
 
 QSize MapWidget::sizeHint() const {
-  return QSize(400, 200);
+  return QSize(800, 600);
 }
 
 QSize MapWidget::minimumSizeHint() const {
-  return QSize(100, 50);
+  return QSize(400, 200);
 }
-
-/*
-void MapWidget::updateArea(){
-  srand(time(NULL));
-
-  _seed = rand() % 300 + 2; 
-
-  qDebug() << _seed;
-  repaint();
-}
-*/
 
 void MapWidget::paintEvent(QPaintEvent*){
  
@@ -46,8 +35,8 @@ void MapWidget::paintEvent(QPaintEvent*){
 
   // Start painting
 
-  const int scale = 70;
-  QPoint origin(200, 100);
+  const int scale = 120;
+  QPoint origin(width() / 2., height() / 2);
 
   std::list<QPoint> seed_points = {
       QPoint(-1, -1),
@@ -56,10 +45,20 @@ void MapWidget::paintEvent(QPaintEvent*){
       QPoint(-1, 1)
   };
 
+  srand(_seed); // Set seed
+ 
   for(auto& point: seed_points)
-    point *= scale;
-  
-  std::list<QPoint> new_points = fractalLine(seed_points, _seed, _maxIter);
+  {
+    point *= scale; // Scale points to appropriate size;
+
+    // Intial displacement of seed points (optional)
+    int displ_x = displacement(_initialDispl);
+    int displ_y = displacement(_initialDispl);
+    point += QPoint(displ_x, displ_y);
+  }
+
+  // Can be replaced by proper Render object in future release
+  std::list<QPoint> new_points = fractalLine(seed_points, _seed, _maxIter, _initialDispl);
 
   size_t n_points = new_points.size(); // Returns size for new set of points
   QPoint *points = new QPoint[n_points]; // Create new array of points (used to draw polygon)
@@ -70,7 +69,7 @@ void MapWidget::paintEvent(QPaintEvent*){
 
   painter.drawPolygon(points, n_points);
 
-  if(_showPoints)
+  if(_showPoints) // Trigger show points
   {
     pen.setWidth(5);
     pen.setColor(QColor(0, 0, 255));

@@ -2,24 +2,39 @@
 #include <QDebug>
 #include <cmath>
 
-int noise(int max_offset){
-  return (rand()%3 - 1) * - 1 * rand()%max_offset;
+/**
+ *  Displacement function
+ *  Given a max_displacement, returns a positive or negative
+ *  random number in range abs(x) < r, with r = max_displacement.
+ *  @param max_displacement int
+ */
+int displacement(int max_displacement){
+   
+  if(max_displacement == 0)
+    return 0;
+   
+  int displ = rand() % max_displacement;
+  displ = (rand() % 2) ? displ : -1 * displ;
+
+  return displ; 
 }
 
 std::list<QPoint> fractalLine(std::list<QPoint> original, int seed, int n_iterations,
-      int max_offset, int max_iterations)
+      int initialDispl, int max_iterations)
 {
-  srand(seed);
-
   std::list<QPoint> tmp(original); // Copy of original set of points
 
-  for(int iteration = 0; iteration < n_iterations + 1; iteration++) // Consider iteration 0 as first
+  for(int iteration = 0; iteration < n_iterations; iteration++) // Consider iteration 0 as first
   {
    
+    // This is the radious reduction function, can be replaced by strategy
+    double max_displ = initialDispl / pow(2, (iteration + 1)); 
+
     std::list<QPoint>::iterator i = tmp.begin();
     std::list<QPoint>::iterator next = i; // Initially set next = i, following step it will be updated
   
     qDebug() << "fractal::Iteration\nSeed: " << seed;
+
     while( i != tmp.end() )
     {
       next++; // Next has to be next element after i
@@ -29,20 +44,37 @@ std::list<QPoint> fractalLine(std::list<QPoint> original, int seed, int n_iterat
       // we need the value at beginning of the list.
       QPoint next_point = ( next == tmp.end() ) ? *tmp.begin() : *next; 
 
-      // Compute new middle point
-      int next_x = (i->x() + next_point.x()) / 2;
-      int next_y =(i->y() + next_point.y()) / 2;
+      QPoint x1 = *i; // x1 point
+      QPoint x2 = next_point; // x2 point
 
-      //int intensity = max_offset * (1 - (float) iteration / max_iterations); // Max offset is 20, max number of iterations is 10
-      double displ_factor = 50 / pow((iteration + 1), 2); // Displacement factor
-      displ_factor = (rand() % 2) ? displ_factor : -displ_factor; // Displacement value +/- displacement factor on y coord
+      QPoint p = (x1 + x2) / 2; // Calculate middle point
 
-      int displ_x = displ_factor; // Displacement value +/- displacement factor on x coord
-      int displ_y = displ_factor; // Displacement value +/- displacement factor on x coord
+      QPoint diff = x2 - x1; // Vector difference
+      QPoint normal;
+
+      // Normal is defined as (-y, x)
+      // where y = (x2_y - x1_y) / norm( x2 - x1 )
+      // and x = (x2_x - x1_x) / norm( x2 - x1 )
+      int mLength = diff.manhattanLength(); // manhattan length is used to compute norm because quicker
+      int x = round((double) diff.x() / (double) mLength); // y = (x2_y - x1_y) / norm( x2 - x1 )
+      int y = round((double) diff.y() / (double) mLength); // x = (x2_x - x1_x) / norm( x2 - x1 )
+      normal.setX(-y);
+      normal.setY(x);
+
+      /*
+      qDebug() << "fractal::Normal vector " << normal
+           << "\nvector p = " << p
+           << "\nvectors x1 = " << x1
+           << "\nvector x2" << x2
+           << "\ndiff" << diff
+           << "\nmLength" << mLength
+           << "\ndouble division" << (double) diff.x() / (double) mLength 
+           << "\n" << round( (double) diff.y() / (double) mLength); 
+      */
+    
+      int k = displacement(max_displ); // k is displacement factor
+      QPoint new_point = p + k * normal; // Create point and add noise
       
-      qDebug() << "fractal::Displacement:" << QPoint(displ_x, displ_y);
-      QPoint new_point(next_x + displ_x, next_y + displ_y); // Create point and add noise
-
       tmp.emplace(next, new_point); // Place element in between the two elements
       i = next; // Jump the element just created
     }
@@ -50,5 +82,3 @@ std::list<QPoint> fractalLine(std::list<QPoint> original, int seed, int n_iterat
 
   return tmp;
 }
-
-
