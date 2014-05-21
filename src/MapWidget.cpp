@@ -5,8 +5,14 @@
 #include <QDebug>
 #include "MapWidget.h"
 #include <cmath>
+#include <list>
 
-MapWidget::MapWidget(QWidget *parent) : QWidget(parent){}
+#include "fractal.h"
+
+MapWidget::MapWidget(QWidget *parent) : QWidget(parent){
+  _maxIter = 0;
+  _seed = 0;
+}
 
 QSize MapWidget::sizeHint() const {
   return QSize(400, 200);
@@ -16,33 +22,59 @@ QSize MapWidget::minimumSizeHint() const {
   return QSize(100, 50);
 }
 
+/*
+void MapWidget::updateArea(){
+  srand(time(NULL));
+
+  _seed = rand() % 300 + 2; 
+
+  qDebug() << _seed;
+  repaint();
+}
+*/
+
 void MapWidget::paintEvent(QPaintEvent*){
+ 
   // Define the painter used
   QPainter painter(this);
   QBrush brush(QColor(255, 0, 0));
   QPen pen;
   
-  pen.setWidth(3);
+  pen.setWidth(1);
   painter.setBrush(brush);
   painter.setPen(pen);
 
   // Start painting
 
-  const int count = 20;
-  double t = 2 * 3.14 / count;
-  const int radious = 30;
-  const QPoint origin(0, 0);
+  const int scale = 70;
+  QPoint origin(200, 100);
 
-  QPoint points[count];
+  std::list<QPoint> seed_points = {
+      QPoint(-1, -1),
+      QPoint(1, -1),
+      QPoint(1, 1),
+      QPoint(-1, 1)
+  };
 
-  for(int i = 0; i < count; i++)
-  {
-    int x = round(radious * cos(i * t));
-    int y = round(radious * sin(i * t));
-    points[i] = QPoint( origin.x() + x, origin.y() + y);      
-  }
-
+  for(auto& point: seed_points)
+    point *= scale;
   
+  std::list<QPoint> new_points = fractalLine(seed_points, _seed, _maxIter);
 
-  painter.drawPolygon(points, count);  
+  size_t n_points = new_points.size(); // Returns size for new set of points
+  QPoint *points = new QPoint[n_points]; // Create new array of points (used to draw polygon)
+
+  int i = 0;
+  for(auto& point: new_points)
+    points[i++] = point + origin; // Translation to origin
+
+  painter.drawPolygon(points, n_points);
+
+  if(_showPoints)
+  {
+    pen.setWidth(5);
+    pen.setColor(QColor(0, 0, 255));
+    painter.setPen(pen);
+    painter.drawPoints(points, n_points);
+  }
 }
